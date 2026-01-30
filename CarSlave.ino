@@ -3,6 +3,19 @@
 #include <ESP32Encoder.h>
 #include <ESP32Servo.h>
 
+// ================= STRUCT DEFINITIONS =================
+#define MAX_STEPS 20
+
+struct Instruction {
+  int8_t direction;   // Direction: 1–4 (Forwards, Backwards, Left, Right)
+  int16_t value;      // Value: Distance (cm) or angle (deg)
+};
+
+struct RoutePacket {
+  uint8_t count;          // Number of steps in the route
+  Instruction steps[MAX_STEPS]; // Array of steps
+};
+
 Servo steeringServo;
 ESP32Encoder encoder1;
 ESP32Encoder encoder2;
@@ -32,6 +45,7 @@ int displayNumber = -1;
 
 uint8_t masterAddress[] = { 0x08, 0x3A, 0x8D, 0x0D, 0x91, 0x98 };
 
+// ================= RUN MOTORS =================
 void runMotors(int leftMotor_speed, int rightMotor_speed) {
   leftMotor_speed = constrain(leftMotor_speed, -255, 255);
   rightMotor_speed = constrain(rightMotor_speed, -255, 255);
@@ -57,7 +71,7 @@ void runMotors(int leftMotor_speed, int rightMotor_speed) {
 }
 
 // ================= RECEIVE ROUTE =================
-void onRouteReceived(const uint8_t *macAddr, const uint8_t *data, int len) {
+void onRouteReceived(const esp_now_recv_info *info, const uint8_t *data, int len) {
   if (len != sizeof(RoutePacket)) {
     Serial.println("Invalid route packet received.");
     return;
@@ -85,6 +99,7 @@ void onRouteReceived(const uint8_t *macAddr, const uint8_t *data, int len) {
   }
 }
 
+// ================= BATTERY DISPLAY =================
 void batteryDisplay() {
   int batteryVoltageADC = analogRead(Vout);
   batteryVoltageADC = constrain(batteryVoltageADC, 0, 3723);
@@ -108,6 +123,7 @@ void batteryDisplay() {
   digitalWrite(Z, (displayNumber >> 0) & 1);
 }
 
+// ================= SETUP =================
 void setup() {
   Serial.begin(115200);
   WiFi.mode(WIFI_STA);
@@ -151,14 +167,15 @@ void setup() {
   steeringServo.write(90);
 }
 
+// ================= LOOP =================
 void loop() {
   RightCount = -encoder1.getCount();
   LeftCount = encoder2.getCount();
 
   batteryDisplay();
 
-  Serial.print("Left Motor: ");
+  /*Serial.print("Left Motor: ");
   Serial.print(LeftCount);
   Serial.print("\tRight Motor: ");
-  Serial.println(RightCount);
+  Serial.println(RightCount);*/
 }
