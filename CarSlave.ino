@@ -56,6 +56,35 @@ void runMotors(int leftMotor_speed, int rightMotor_speed) {
   }
 }
 
+// ================= RECEIVE ROUTE =================
+void onRouteReceived(const uint8_t *macAddr, const uint8_t *data, int len) {
+  if (len != sizeof(RoutePacket)) {
+    Serial.println("Invalid route packet received.");
+    return;
+  }
+
+  RoutePacket receivedPacket;
+  memcpy(&receivedPacket, data, sizeof(RoutePacket));
+
+  Serial.println("Route received:");
+  for (int i = 0; i < receivedPacket.count; i++) {
+    Serial.print("Step ");
+    Serial.print(i);
+    Serial.print("\t Direction: ");
+
+    switch (receivedPacket.steps[i].direction) {
+      case 1: Serial.print("Forwards"); break;
+      case 2: Serial.print("Right"); break;
+      case 3: Serial.print("Backwards"); break;
+      case 4: Serial.print("Left"); break;
+      default: Serial.print("Unknown"); break;
+    }
+
+    Serial.print(" \t Value: ");
+    Serial.println(receivedPacket.steps[i].value);
+  }
+}
+
 void batteryDisplay() {
   int batteryVoltageADC = analogRead(Vout);
   batteryVoltageADC = constrain(batteryVoltageADC, 0, 3723);
@@ -82,6 +111,14 @@ void batteryDisplay() {
 void setup() {
   Serial.begin(115200);
   WiFi.mode(WIFI_STA);
+
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("ESP-NOW initialization failed!");
+    return;
+  }
+
+  esp_now_register_recv_cb(onRouteReceived);
+  Serial.println("ESP-NOW receiver initialized.");
 
   ESP32Encoder::useInternalWeakPullResistors = puType::up;
 
